@@ -1,5 +1,0 @@
-Revision history for Perl extension Net-SCP-Expect
-
-0.01  Fri Mar 15 14:22:37 2002
-	- original version; created by h2xs 1.21 with options
-		-A -X -n String

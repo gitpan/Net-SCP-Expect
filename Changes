@@ -1,0 +1,21 @@
+Revision history for Perl extension Net-SCP-Expect
+
+0.01  Fri Mar 15 14:22:37 2002
+	- original version; created by h2xs 1.21 with options
+		-A -X -n String
+
+0.02  Thu Apr 04 08:44:34 2002
+        - The -e file test is no longer applied in a remote-to-local scenario
+
+        - If a login is supplied, then that login is now automatically
+          prepended to the host name, e.g. 'host:file.txt' becomes
+          'login@host:file.txt', instead of using the current host name. Thanks
+          to Guoben Li for the report.
+
+        - Regarding the above comment, there is a lot more automatic parsing
+          in general so that you can use less verbose syntax if you want.  See
+          the scp method for what now passes as valid syntax.
+
+        - Tested with Expect 1.15 - seems to work
+
+        - Fixed this distro so that it unpacks correctly. :)

@@ -28,9 +28,11 @@ SYNOPSIS
 
     "$scpe->scp('host:/some/dir/filename','newfilename');"
 
+    See the scp() method for more information on valid syntax.
+
 PREREQUISITES
     Expect 1.14. May work with earlier versions, but was tested with 1.14
-    only.
+    (and now 1.15) only.
 
 DESCRIPTION
     This module is simply a wrapper around the scp call. The primary
@@ -42,39 +44,57 @@ USAGE
     Net::SCP::Expect->new(*option=>val*,...)
 
     Creates a new object and optionally takes a series of options (see
-    below).
+    OPTIONS below).
+
+    host(*host*)
+
+    Sets the host for the current object
 
     login(*login,password*)
 
     If the login and password are not passed as options to the constructor,
-    they must be passed with this method. If they were already set, this
-    method will overwrite them with the new values. Failure to pass a login
-    or a password to this method will cause the program to croak.
+    they must be passed with this method (or set individually - see 'user'
+    and 'password' methods). If they were already set, this method will
+    overwrite them with the new values.
 
-    scp(*source, host:destination*);
+    password(*password*)
 
-    or
+    Sets the password for the current user
+
+    user(*user*)
+
+    Sets the user for the current object
+
+    scp()
+
+    Copies the file from source to destination. If no host is specified, you
+    will be using 'scp' as an expensive form of 'cp'.
+
+    There are several valid ways to use this method
+
+    REMOTE TO LOCAL
+
+    scp(*source, user@host:destination*);
+
+    scp(*source, host:destination*); # User already defined
+
+    scp(*source, :destination*); # User and host already defined
+
+    scp(*source, destination*); # Same as previous
+
+    LOCAL TO REMOTE
+
+    scp(*user@host:source, destination*);
 
     scp(*host:source, destination*);
 
-    or
-
-    scp(*source, destination*); # Same as scp(*source, host:destination*)
-
-    Copies the file from source to destination. If the host name is omitted
-    from this method, then it is assumed that you are copying from the local
-    machine to a remote destination on *host*. Of course, if you didn't
-    specify a host, then you are simply using scp as an expensive version of
-    cp.
-
-    To copy from a remote location to your local machine, you must use the
-    longhand form.
+    scp(*:source, destination*);
 
 OPTIONS
     cipher - Selects the cipher to use for encrypting the data transfer.
 
-    host - Specify the host name. This is only useful if you are copying
-    from the local machine to a remote machine, but NOT vice-versa.
+    host - Specify the host name. This is now useful for both
+    local-to-remote and remote-to-local transfers.
 
     password - The password for the given login.
 
@@ -101,11 +121,19 @@ NOTES
     In the event that Ben Trott releases a version of *Net::SSH::Perl* that
     supports scp, I recommend using that instead.
 
+    Don't whine to me about putting passwords in scripts. Set your
+    permissions appropriately or use a .rc file of some kind.
+
 FUTURE PLANS
     There are a few options I haven't implemented. If you *really* want to
     see them added, let me know and I'll see what I can do.
 
-    A test suite
+    A test suite (yes, I almost have one together)
+
+KNOWN BUGS
+    At least one user has reported warnings related to POD parsing with Perl
+    5.00503. These can be safely ignored. They do not appear in Perl 5.6 or
+    later.
 
 THANKS
     Thanks to Roland Giersig (and Austin Schutz) for the Expect module. Very

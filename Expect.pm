@@ -9,6 +9,7 @@ package Net::SCP::Expect;
 use strict;
 use Expect;
 use POSIX qw(:signal_h WNOHANG);
+use File::Basename;
 use Carp;
 use Cwd;
 
@@ -16,7 +17,7 @@ $SIG{CHLD} = \&reapChild;
 
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '.01';
+   $VERSION = '.02';
 }
 
 # Options added as needed
@@ -60,6 +61,25 @@ sub login{
    $self->_set('password',$password);
 }
 
+sub password{
+   my($self,$password) = @_;
+   croak("No password supplied to 'password()' method") unless $password;
+   
+   $self->_set('password',$password);
+}
+
+sub host{
+   my($self,$host) = @_;
+   croak("No host supplied to 'host()' method") unless $host;
+   $self->_set('host',$host);
+}
+
+sub user{
+   my($self,$user) = @_;
+   croak("No user supplied to 'user()' method") unless $user;
+   $self->_set('user',$user);
+} 
+
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # If the hostname is not included as part of the source, it is assumed to
 # be part of the destination.
@@ -75,20 +95,58 @@ sub scp{
    my $recursive = $self->_get('recursive');
    my $verbose   = $self->_get('verbose');
    my $preserve  = $self->_get('preserve');
+   my $host      = $self->_get('host');
+ 
+   my($check,$file,$reverse);
+
+   ##################################################################
+   # If the second argument is not provided, the remote file will be
+   # given the same (base) name as the local file (or vice-versa).
+   ##################################################################
+   unless($to){
+      $to = basename($from);
+   }  
+
+   # This is probably lame.  Bite me.
+   if($from =~ /(\w+)?:(.*?)$/){
+      my $temp = $to;
+      $to = $from;
+      $from = $temp;
+      $reverse++;
+   }
+   else{
+      $check++;
+   }
+
+   if($to =~ /^(\w+)@(\w+):(.*?)$/){
+      $login = $1 || $login;
+      $host  = $2 || $host;
+      $file  = $3 || basename($from);
+   }
+   elsif($to =~ /^(\w+):(.*?)$/){
+      $host = $1 || $host;
+      $file = $2 || basename($from);
+   }
+   elsif($to =~ /^:?(.*?)$/){
+      $file = $1 || basename($from);
+   }
+   else{}
+
+   $to = "$login\@$host:$file";
+
+   if($reverse){
+      my $temp = $to;
+      $to = $from;
+      $from = $temp;
+   }
 
    croak("No login. Can't scp") unless $login;
    croak("No password. Can't scp") unless $password;
 
-   my $host = $self->_get('host');
-   $to = "$host:" unless $to;
-
-   if($to =~ /^\w+:\w+$/){
-      my $temp = $from;
-      $from = $to;
-      $to = $temp;
+   # Don't check in a remote-to-local scenario
+   if($check){
+      croak("No such file: $from") unless -e $from;
    }
-
-   croak("No such file: $from") unless -e $from;
 
    # Gather flags.
    my $flags;
@@ -111,7 +169,7 @@ sub scp{
 
    $scp->log_stdout(0);
 
-   unless($scp->expect($timeout,-re=>'[Pp]assword')){
+   unless($scp->expect($timeout,-re=>'[Pp]assword|[Pp]assphrase')){
       my $err = $scp->before();
       if($err){
          croak("Problem performing scp: $err");
@@ -177,9 +235,13 @@ C<< my $scpe = Net::SCP::Expect->new(user=>'user',password=>'xxxx'); >>
 
 C<< $scpe->scp('host:/some/dir/filename','newfilename'); >>
 
+
+See the B<scp()> method for more information on valid syntax.
+
 =head1 PREREQUISITES
 
-Expect 1.14.  May work with earlier versions, but was tested with 1.14 only.
+Expect 1.14.  May work with earlier versions, but was tested with 1.14 (and now 1.15)
+only.
 
 =head1 DESCRIPTION
 
@@ -191,38 +253,60 @@ of being forced to deal with interactive sessions.
 
 B<Net::SCP::Expect-E<gt>new(>I<option=E<gt>val>,...B<)>
 
-Creates a new object and optionally takes a series of options (see below).
+Creates a new object and optionally takes a series of options (see OPTIONS below).
+
+B<host(>I<host>B<)>
+
+Sets the host for the current object
 
 B<login(>I<login,password>B<)>
 
 If the login and password are not passed as options to the constructor, they
-must be passed with this method.  If they were already set, this method will
-overwrite them with the new values.  Failure to pass a login or a password to
-this method will cause the program to croak.
+must be passed with this method (or set individually - see 'user' and 'password'
+methods).  If they were already set, this method will overwrite them with the new
+values.
 
-B<scp(>I<source, host:destination>B<);>
+B<password(>I<password>B<)>
 
-or
+Sets the password for the current user
+
+B<user(>I<user>B<)>
+
+Sets the user for the current object
+
+
+B<scp()>
+
+Copies the file from source to destination.  If no host is specified, you
+will be using 'scp' as an expensive form of 'cp'.
+
+There are several valid ways to use this method
+
+B<REMOTE TO LOCAL>
+
+B<scp(>I<source, user@host:destination>B<);>
+
+B<scp(>I<source, host:destination>B<);> # User already defined
+
+B<scp(>I<source, :destination>B<);> # User and host already defined
+
+B<scp(>I<source, destination>B<);> # Same as previous
+
+B<LOCAL TO REMOTE>
+
+B<scp(>I<user@host:source, destination>B<);>
 
 B<scp(>I<host:source, destination>B<);>
 
-or
+B<scp(>I<:source, destination>B<);>
 
-B<scp(>I<source, destination>B<);> # Same as B<scp(>I<source, host:destination>B<)>
-
-Copies the file from source to destination.  If the host name is omitted from
-this method, then it is assumed that you are copying from the local machine
-to a remote destination on I<host>.  Of course, if you didn't specify a host,
-then you are simply using scp as an expensive version of cp.
-
-To copy from a remote location to your local machine, you must use the longhand form.
 
 =head1 OPTIONS
 
 B<cipher> - Selects the cipher to use for encrypting the data transfer.
 
-B<host> - Specify the host name.  This is only useful if you are copying from
-the local machine to a remote machine, but NOT vice-versa.
+B<host> - Specify the host name.  This is now useful for both local-to-remote
+and remote-to-local transfers.
 
 B<password> - The password for the given login.
 
@@ -258,7 +342,12 @@ permissions appropriately or use a .rc file of some kind.
 There are a few options I haven't implemented.  If you *really* want to
 see them added, let me know and I'll see what I can do.
 
-A test suite
+A test suite (yes, I almost have one together)
+
+=head1 KNOWN BUGS
+
+At least one user has reported warnings related to POD parsing with Perl 5.00503.
+These can be safely ignored.  They do not appear in Perl 5.6 or later.
 
 =head1 THANKS
 

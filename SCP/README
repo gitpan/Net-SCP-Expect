@@ -1,0 +1,118 @@
+NAME
+    Net::SCP::Expect - Wrapper for scp that allows passwords via Expect.
+
+SYNOPSIS
+    Example 1 - uses login method, longhand scp:
+
+    "my $scpe = Net::SCP::Expect->new;"
+
+    "$scpe->login('user name', 'password');"
+
+    "$scpe->scp('file','host:/some/dir');"
+
+    .
+
+    Example 2 - uses constructor, shorthand scp:
+
+    "my $scpe = Net::SCP::Expect->new(host=>'host', user=>'user',
+    password=>'xxxx');"
+
+    "$scpe->scp('file','/some/dir'); # 'file' copied to 'host' at
+    '/some/dir'"
+
+    .
+
+    Example 3 - Copying from remote machine to local host
+
+    "my $scpe = Net::SCP::Expect->new(user=>'user',password=>'xxxx');"
+
+    "$scpe->scp('host:/some/dir/filename','newfilename');"
+
+PREREQUISITES
+    Expect 1.14. May work with earlier versions, but was tested with 1.14
+    only.
+
+DESCRIPTION
+    This module is simply a wrapper around the scp call. The primary
+    difference between this module and *Net::SCP* is that you may send a
+    password programmatically, instead of being forced to deal with
+    interactive sessions.
+
+USAGE
+    Net::SCP::Expect->new(*option=>val*,...)
+
+    Creates a new object and optionally takes a series of options (see
+    below).
+
+    login(*login,password*)
+
+    If the login and password are not passed as options to the constructor,
+    they must be passed with this method. If they were already set, this
+    method will overwrite them with the new values. Failure to pass a login
+    or a password to this method will cause the program to croak.
+
+    scp(*source, host:destination*);
+
+    or
+
+    scp(*host:source, destination*);
+
+    or
+
+    scp(*source, destination*); # Same as scp(*source, host:destination*)
+
+    Copies the file from source to destination. If the host name is omitted
+    from this method, then it is assumed that you are copying from the local
+    machine to a remote destination on *host*. Of course, if you didn't
+    specify a host, then you are simply using scp as an expensive version of
+    cp.
+
+    To copy from a remote location to your local machine, you must use the
+    longhand form.
+
+OPTIONS
+    cipher - Selects the cipher to use for encrypting the data transfer.
+
+    host - Specify the host name. This is only useful if you are copying
+    from the local machine to a remote machine, but NOT vice-versa.
+
+    password - The password for the given login.
+
+    port - Use the specified port.
+
+    preserve - Preserves modification times, access times, and modes from
+    the original file.
+
+    recursive - Set to 1 if you want to recursively copy entire directories.
+
+    timeout - Sets the timeout value for your operation. The default is 10
+    seconds.
+
+    user - The login name you wish to use.
+
+    verbose - Set to 1 if you want verbose output sent to STDOUT.
+
+NOTES
+    The -q option (disable progress meter) is automatically passed to scp.
+
+    The -B option may NOT be set. If you don't want to send passwords, I
+    recommend using *Net::SCP* instead.
+
+    In the event that Ben Trott releases a version of *Net::SSH::Perl* that
+    supports scp, I recommend using that instead.
+
+FUTURE PLANS
+    There are a few options I haven't implemented. If you *really* want to
+    see them added, let me know and I'll see what I can do.
+
+    A test suite
+
+THANKS
+    Thanks to Roland Giersig (and Austin Schutz) for the Expect module. Very
+    handy.
+
+AUTHOR
+    Daniel Berger
+
+    djberg96@hotmail.com
+

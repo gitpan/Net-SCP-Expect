@@ -5,7 +5,7 @@ BEGIN{
    use Cwd;
    use File::Basename;
    use vars qw/@INC $dir/;
-   $dir = dirname(cwd());
+   $dir = dirname(cwd()) . "/blib/lib";
    unshift(@INC,$dir);
 }
 
@@ -73,7 +73,6 @@ my $nse = Net::SCP::Expect->new(
    user     => $login,
    password => $password,
    auto_yes => 1,
-   timeout  => 45,
 );
 
 ##############################

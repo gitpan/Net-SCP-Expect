@@ -14,3 +14,8 @@ back to your local filesystem.  If any of the tests fail, you may need to
 manually remove the files from the remote host.
 
 After this test has sucessfully finished I recommend deleting the .test files.
+
+NOTES
+=====
+This test can take quite a while, depending on your connection speed.  At home
+using my slow DSL connection (about 30k/s) it took about 45 minutes.

@@ -1,0 +1,15 @@
+CHANGES
+Makefile.PL
+MANIFEST
+README
+Expect.pm
+t/attributes.t
+t/glob.t
+t/string_parse.t
+itest/README
+itest/itest.pl
+itest/large_file.test
+itest/medium_file.test
+itest/small_file.test
+itest/small_file2.test
+itest/small_file3.test

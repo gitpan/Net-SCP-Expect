@@ -1,4 +1,9 @@
 Revision history for Perl extension Net-SCP-Expect
+0.09  Sun May 11 12:24:32 2003
+- Fixed the Makefile.PL issue - it should actually build and install correctly
+  now.
+- Minor addition to itest/README file
+
 0.08  Sun Apr 26 17:22:03 2003
 - Added a test suite and interactive test program (see the "itest" directory).
 - Fixed a bug where verbose output was accidentally being picked up by

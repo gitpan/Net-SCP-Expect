@@ -17,7 +17,7 @@ $SIG{CHLD} = \&reapChild;
 
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '.08';
+   $VERSION = '.09';
 }
 
 # Options added as needed
@@ -117,7 +117,6 @@ sub scp{
    my $recursive    = $self->_get('recursive');
    my $verbose      = $self->_get('verbose');
    my $preserve     = $self->_get('preserve');
-   my $host         = $self->_get('host');
    my $handler      = $self->_get('error_handler');
    my $auto_yes     = $self->_get('auto_yes');
    my $no_check     = $self->_get('no_check');
@@ -132,7 +131,7 @@ sub scp{
       $to = basename($from);
    }  
 
-   my($host,$login,$dest);
+   my($host,$dest);
 
    # Parse the to/from string. If the $from contains a ':', assume it is the remote host
    if($from =~ /:/){

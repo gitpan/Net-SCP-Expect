@@ -17,7 +17,7 @@ $SIG{CHLD} = \&reapChild;
 
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '.05';
+   $VERSION = '.06';
 }
 
 # Options added as needed
@@ -37,7 +37,7 @@ sub new{
       _auto_yes      => $arg{auto_yes} || 0,
       _timeout       => $arg{timeout} || 10,
       _timeout_auto  => $arg{timeout_auto} || 1,
-      _timeout_err   => $arg{timeout_err} || 1,
+      _timeout_err   => $arg{timeout_err} || undef,
       _no_check      => $arg{no_check} || 0,
    };
 
@@ -228,13 +228,16 @@ sub scp{
                }
             }
          ],
+         ['eof' => sub{} ],
       );
+   }
+   else{
+      scp->expect($timeout_err, ['eof' => sub { }]);
    }
 
    if($verbose){ print $scp->after(),"\n" }
 
-   $scp->soft_close();
-   $scp->hard_close() if $scp;
+   $scp->hard_close();
    return;
 }
 
@@ -292,6 +295,8 @@ See the B<scp()> method for more information on valid syntax.
 
 Expect 1.14.  May work with earlier versions, but was tested with 1.14 (and now 1.15)
 only.
+
+Term::ReadPassword 0.01 is required if you want to perform the tests.
 
 =head1 DESCRIPTION
 
@@ -404,7 +409,10 @@ considerably.  The default is 1 second (which should be plenty).
 B<timeout_err> - Sets the timeout for the additional error checking that the
 module does.  Because errors come back almost instantaneously, I thought it
 best to make this a separate option for the same reasons as the 'timeout_auto'
-option above.  The default is 1 second.
+option above.  The default is 'undef'.
+
+Setting it to any integer value means that your program will exit after that
+many seconds *whether or not the operation has completed*.  Caveat programmor.
 
 B<user> - The login name you wish to use.
 

@@ -1,32 +1,19 @@
 Revision history for Perl extension Net-SCP-Expect
 
-0.01  Fri Mar 15 14:22:37 2002
-	- original version; created by h2xs 1.21 with options
-		-A -X -n String
+0.06  Mon Jun 10 14:00:00 2002
+        - Fixed a MAJOR bug in which the spawned scp process was being killed by
+          the parent instead of waiting for the operation to complete.  Thanks to
+          Ruban Phukan for the spot and *many* thanks to J. David Blackstone for
+          the fix.
 
-0.02  Thu Apr 04 08:44:34 2002
-        - The -e file test is no longer applied in a remote-to-local scenario
+        - Some work on the test program - almost complete.
 
-        - If a login is supplied, then that login is now automatically
-          prepended to the host name, e.g. 'host:file.txt' becomes
-          'login@host:file.txt', instead of using the current host name. Thanks
-          to Guoben Li for the report.
+0.05  Mon Apr 29 15:10:49 2002
+        - Removed a lame -e check that was causing metacharacters to fail.  Any type
+          of non-existent file error will now be treated like any other error.
 
-        - Regarding the above comment, there is a lot more automatic parsing
-          in general so that you can use less verbose syntax if you want.  See
-          the scp method for what now passes as valid syntax.
-
-        - Tested with Expect 1.15 - seems to work
-
-        - Fixed this distro so that it unpacks correctly. :)
-
-0.03  Wed Apr 10 08:04:17 2002
-        - Added better error handling in the event that a call to 'scp()' fails
-
-        - Added an 'error_handler' option/method so that programmers can trap
-          and deal with failed 'scp' calls on their own terms.  Just make sure
-          to die, croak, exit, etc. or your program may hang while waiting for
-          terminal input.
+        - Modified the error handling yet again.  There were two problems that were
+          worked out.  I'll just sum up by saying that it should work better now.
 
 0.04  Fri Apr 12 15:52:33 2002
         - Documentation fixes and additions (thanks BbBoy)
@@ -50,9 +37,30 @@ Revision history for Perl extension Net-SCP-Expect
           fret - this made no difference in any of the testing that I actually did,
           but there it is for you.
 
-0.05  Mon Apr 29 15:10:49 2002
-        - Removed a lame -e check that was causing metacharacters to fail.  Any type
-          of non-existent file error will now be treated like any other error.
+0.03  Wed Apr 10 08:04:17 2002
+        - Added better error handling in the event that a call to 'scp()' fails
 
-        - Modified the error handling yet again.  There were two problems that were
-          worked out.  I'll just sum up by saying that it should work better now.
+        - Added an 'error_handler' option/method so that programmers can trap
+          and deal with failed 'scp' calls on their own terms.  Just make sure
+          to die, croak, exit, etc. or your program may hang while waiting for
+          terminal input.
+
+0.02  Thu Apr 04 08:44:34 2002
+        - The -e file test is no longer applied in a remote-to-local scenario
+
+        - If a login is supplied, then that login is now automatically
+          prepended to the host name, e.g. 'host:file.txt' becomes
+          'login@host:file.txt', instead of using the current host name. Thanks
+          to Guoben Li for the report.
+
+        - Regarding the above comment, there is a lot more automatic parsing
+          in general so that you can use less verbose syntax if you want.  See
+          the scp method for what now passes as valid syntax.
+
+        - Tested with Expect 1.15 - seems to work
+
+        - Fixed this distro so that it unpacks correctly. :)
+
+0.01  Fri Mar 15 14:22:37 2002
+	- original version; created by h2xs 1.21 with options
+		-A -X -n String

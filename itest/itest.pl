@@ -15,6 +15,8 @@ use Term::ReadPassword;
 use Digest::MD5;
 use File::Copy;
 
+print "Using version: ", $Net::SCP::Expect::VERSION, "\n";
+
 my $errors = 0; # Tracks total number of failures.
 
 my $small_file  = "small_file.test";

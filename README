@@ -184,8 +184,15 @@ THANKS
     Thanks to Roland Giersig (and Austin Schutz) for the Expect module. Very
     handy.
 
+LICENSE
+    Net::SCP::Expect is licensed under the same terms as Perl itself
+
+COPYRIGHT
+    (C) 2003, Daniel J. Berger, All Rights Reserved
+
 AUTHOR
     Daniel Berger
 
-    djberg96@hotmail.com
+    djberg96 at yahoo dot com
 
+    rubyhacker1 on IRC

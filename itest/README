@@ -1,5 +1,7 @@
 itest -> Interactive Test
 
+Be sure to do perl Makefile.PL; make before starting this script.
+
 There are three test files that will the test program will attempt to copy to
 the remote host:
 

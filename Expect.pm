@@ -17,7 +17,7 @@ $SIG{CHLD} = \&reapChild;
 
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '.09';
+   $VERSION = '.10';
 }
 
 # Options added as needed
@@ -175,7 +175,7 @@ sub scp{
       }
    }
 
-   unless($scp->expect($timeout,-re=>'[Pp]assword:|[Pp]assphrase:')){
+   unless($scp->expect($timeout,-re=>'[Pp]assword.*?:|[Pp]assphrase.*?:')){
       my $err = $scp->before() || $scp->match();
       if($err){
          if($handler){ $handler->($err) }
@@ -467,10 +467,16 @@ Thanks to Roland Giersig (and Austin Schutz) for the Expect module.  Very handy.
 Thanks also go out to all those who have submitted bug reports and/or patches.
 See the Changes file for specifics.
 
+=head1 LICENSE
+Net::SCP::Expect is licensed under the same terms as Perl itself.
+
+=head1 COPYRIGHT
+(C) 2003, Daniel J. Berger, All Rights Reserved
+
 =head1 AUTHOR
 
 Daniel Berger
 
-djberg96@yahoo.com
+djberg96 at yahoo dot com
 
 rubyhacker1 on IRC

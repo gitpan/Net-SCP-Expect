@@ -27,3 +27,25 @@ Revision history for Perl extension Net-SCP-Expect
           and deal with failed 'scp' calls on their own terms.  Just make sure
           to die, croak, exit, etc. or your program may hang while waiting for
           terminal input.
+
+0.04  Fri April 12 15:52:33 2002
+        - Documentation fixes and additions (thanks BbBoy)
+
+        - Added an 'auto_yes' option/method so that you can automatically send
+          'yes' to any 'yes/no' questions you may receive before finally sending
+          your password (for first time connections, etc).
+        
+        - Added a 'no_check' option to help speed up scp calls by up to 2 seconds
+          per call.  Use this only if you're absolutely certain everything is
+          set up correctly.
+
+        - Created separate timeouts for the 'auto_yes' and 'no_check' options, called
+          'timeout_auto', and 'timeout_err', respectively.  I set their defaults
+          to 1 second (which should be plenty) to improve speed.
+
+        - The error_handler will now trap errors in the 'expect' call as well as
+          the 'scp' call.
+
+        - The -q option is *actually* being passed automatically now (oops).  Don't
+          fret - this made no difference in any of the testing that I actually did,
+          but there it is for you.

@@ -48,13 +48,17 @@ USAGE
 
   METHODS
 
+    auto_yes - Set this to 1 if you want to automatically pass a 'yes'
+    string to any yes or no questions that you may encounter before actually
+    being asked for a password, e.g. "Are you sure you want to continue
+    connecting (yes/no)?" for first time connections, etc.
+
     error_handler(*sub ref*)
 
     This sets up an error handler to catch any problems with a call to
     'scp()'. If you do not define an error handler, then a simple 'croak()'
     call will occur, with the last line sent to the terminal added as part
-    of the error message. The first argument passed to your sub will be the
-    error message.
+    of the error message.
 
     I highly recommend you forcibly terminate your program somehow within
     your handler (via die, croak, exit, etc), otherwise your program may
@@ -86,7 +90,7 @@ USAGE
 
     There are several valid ways to use this method
 
-    REMOTE TO LOCAL
+    LOCAL TO REMOTE
 
     scp(*source, user@host:destination*);
 
@@ -96,7 +100,7 @@ USAGE
 
     scp(*source, destination*); # Same as previous
 
-    LOCAL TO REMOTE
+    REMOTE TO LOCAL
 
     scp(*user@host:source, destination*);
 
@@ -105,15 +109,20 @@ USAGE
     scp(*:source, destination*);
 
 OPTIONS
-    cipher - Selects the cipher to use for encrypting the data transfer.
+    auto_yes - Set this to 1 if you want to automatically pass a 'yes'
+    string to any yes or no questions that you may encounter before actually
+    being asked for a password, e.g. "Are you sure you want to continue
+    connecting (yes/no)?" for first time connections, etc.
 
-    error_handler - A sub ref that will be called when an 'scp()' call
-    fails. The first argument passed to your method will be the error
-    message (which is, in fact, the last line of terminal output grabbed by
-    Expect).
+    cipher - Selects the cipher to use for encrypting the data transfer.
 
     host - Specify the host name. This is now useful for both
     local-to-remote and remote-to-local transfers.
+
+    no_check - Set this to 1 if you want to turn off error checking. Use
+    this if you're absolutely positive you won't encounter any errors and
+    you want to speed up your scp calls - up to 2 seconds per call (based on
+    the defaults).
 
     password - The password for the given login.
 
@@ -124,8 +133,19 @@ OPTIONS
 
     recursive - Set to 1 if you want to recursively copy entire directories.
 
-    timeout - Sets the timeout value for your operation. The default is 10
-    seconds.
+    timeout - Sets the timeout value for your scp operation. The default is
+    10 seconds.
+
+    timeout_auto - Sets the timeout for the 'auto_yes' option. I separated
+    this from the standard timeout because generally you won't need nearly
+    as much time as you would for a standard timeout, otherwise your script
+    will drag considerably. The default is 1 second (which should be
+    plenty).
+
+    timeout_err - Sets the timeout for the additional error checking that
+    the module does. Because errors come back almost instantaneously, I
+    thought it best to make this a separate option for the same reasons as
+    the 'timeout_auto' option above. The default is 1 second.
 
     user - The login name you wish to use.
 
@@ -138,7 +158,10 @@ NOTES
     recommend using *Net::SCP* instead.
 
     In the event that Ben Trott releases a version of *Net::SSH::Perl* that
-    supports scp, I recommend using that instead.
+    supports scp, I recommend using that instead. Why? First, it will be a
+    more secure way to perform scp. Second, this module is not fast, even
+    with error checking turned off. Both reasons have to do with TTY
+    interaction.
 
     Don't whine to me about putting passwords in scripts. Set your
     permissions appropriately or use a .rc file of some kind.
@@ -154,9 +177,8 @@ KNOWN BUGS
     5.00503. These can be safely ignored. They do not appear in Perl 5.6 or
     later.
 
-    One user has reported a bug using OpenSSH 3.1p1 where it simply seems to
-    fail for no good reason. This may be a PAM issue, but I will try to get
-    this worked out by release .04.
+    I have one unconfirmed report of problems with wildcard characters. I
+    haven't had a chance to test this yet.
 
 THANKS
     Thanks to Roland Giersig (and Austin Schutz) for the Expect module. Very

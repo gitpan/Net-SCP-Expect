@@ -17,7 +17,7 @@ $SIG{CHLD} = \&reapChild;
 
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '.03';
+   $VERSION = '.04';
 }
 
 # Options added as needed
@@ -34,7 +34,11 @@ sub new{
       _preserve      => $arg{preserve} || 0,
       _recursive     => $arg{recursive} || 0,
       _verbose       => $arg{verbose} || 0,
+      _auto_yes      => $arg{auto_yes} || 0,
       _timeout       => $arg{timeout} || 10,
+      _timeout_auto  => $arg{timeout_auto} || 1,
+      _timeout_err   => $arg{timeout_err} || 1,
+      _no_check      => $arg{no_check} || 0,
    };
 
    bless($self,$class);
@@ -50,6 +54,12 @@ sub _set{
    my($self,$attr,$val) = @_;
    croak("No attribute supplied to 'set()' method") unless defined $attr;
    $self->{"_$attr"} = $val;
+}
+
+sub auto_yes{
+   my($self,$val) = @_;
+   croak("No value passed to 'auto_yes()' method") unless defined $val;
+   $self->_set('auto_yes',$val);
 }
 
 sub error_handler{
@@ -81,6 +91,7 @@ sub host{
    $self->_set('host',$host);
 }
 
+
 sub user{
    my($self,$user) = @_;
    croak("No user supplied to 'user()' method") unless $user;
@@ -94,16 +105,20 @@ sub user{
 sub scp{
    my($self,$from,$to) = @_;
 
-   my $login     = $self->_get('user');
-   my $password  = $self->_get('password');
-   my $timeout   = $self->_get('timeout');
-   my $cipher    = $self->_get('cipher');
-   my $port      = $self->_get('port');
-   my $recursive = $self->_get('recursive');
-   my $verbose   = $self->_get('verbose');
-   my $preserve  = $self->_get('preserve');
-   my $host      = $self->_get('host');
-   my $handler   = $self->_get('error_handler');
+   my $login        = $self->_get('user');
+   my $password     = $self->_get('password');
+   my $timeout      = $self->_get('timeout');
+   my $timeout_auto = $self->_get('timeout_auto');
+   my $timeout_err  = $self->_get('timeout_err');
+   my $cipher       = $self->_get('cipher');
+   my $port         = $self->_get('port');
+   my $recursive    = $self->_get('recursive');
+   my $verbose      = $self->_get('verbose');
+   my $preserve     = $self->_get('preserve');
+   my $host         = $self->_get('host');
+   my $handler      = $self->_get('error_handler');
+   my $auto_yes     = $self->_get('auto_yes');
+   my $no_check     = $self->_get('no_check');
  
    my($check,$file,$reverse);
 
@@ -164,31 +179,33 @@ sub scp{
    $flags .= "-r " if $recursive;
    $flags .= "-v " if $verbose;
    $flags .= "-p " if $preserve;
+   $flags .= "-q ";  # Always pass this option (no progress meter)
 
    my $scp = Expect->new;
-   $scp->raw_pty(1); # Don't take a chance on an echo'd password
-   #$scp->debug(2);
+   #$scp->raw_pty(1); # Don't take a chance on an echo'd password
 
-   if($flags){
-      $scp = Expect->spawn("scp $flags $from $to") or croak "Couldn't start program: $!\n";
-   }
-   else{
-      $scp = Expect->spawn("scp $from $to") or croak "Couldn't start program: $!\n";
-   }
+   $scp = Expect->spawn("scp $flags $from $to") or croak "Couldn't start program: $!\n";
 
    $scp->log_stdout(0);
 
-   unless($scp->expect($timeout,-re=>'[Pp]assword|[Pp]assphrase')){
+   if($auto_yes){
+      while($scp->expect($timeout_auto,-re=>'[Yy]es\/[Nn]o')){
+         $scp->send("yes\n");
+      }
+   }
+
+   unless($scp->expect($timeout,-re=>'[Pp]assword:|[Pp]assphrase:')){
       my $err = $scp->before();
       if($err){
+         if($handler){ $handler->($err) }
          croak("Problem performing scp: $err");
       }
-      croak("scp timed out");
+      croak("scp timed out while trying to connect to $host");
    }
 
    if($verbose){ print $scp->before() }
 
-   $scp->log_file(\&handleErr);
+   #$scp->log_file(\&handleErr);
    $scp->send("$password\n");
 
    #############################################################
@@ -196,38 +213,41 @@ sub scp{
    # some other bizarre error.  Anything passed back to the
    # terminal at this point means that something went wrong.
    #############################################################
-   if($scp->expect(10,-re=>'.*?[Pp]ass.*')){
-      my $error = $scp->match();
-      if($handler){
-         $handler->($error);
+   unless($no_check){
+      if($scp->expect($timeout_err,-re=>'[Pp]ass.*')){
+         my $error = $scp->before() || $scp->match();
+         if($handler){
+            $handler->($error);
+         }
+        croak("Error: Bad password");
       }
-      croak("Error: Bad password");
-   }
 
-   if($scp->expect(10,'.*')){
-      my $error = $scp->match();
-      if($handler){
-         $handler->($error);
+      if($scp->expect($timeout_err,'.*?')){
+         my $error = $scp->match();
+         if($handler){
+            $handler->($error);
+         }
+         croak("Error - last line returned was: $error");
       }
-      croak("Error - last line returned was: $error");
    }
 
    if($verbose){ print $scp->after(),"\n" }
 
    $scp->soft_close();
    $scp->hard_close() if $scp;
+   return;
 }
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # As far as I can tell, just about *all* output, regardless of whether or not
 # it's a true error, will get sent here.  Hence, the regex check.
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-sub handleErr{
-   my $err = shift;
-   if($err =~ /permission denied/i){
-      croak("Invalid password");
-   }
-}
+#sub handleErr{
+#   my $err = shift;
+#   if($err =~ /permission denied/i){
+#      croak("Invalid password");
+#   }
+#}
 
 sub reapChild{
    do {} while waitpid(-1,WNOHANG) > 0;
@@ -287,12 +307,16 @@ Creates a new object and optionally takes a series of options (see OPTIONS below
 
 =head2 METHODS
 
+B<auto_yes> - Set this to 1 if you want to automatically pass a 'yes' string to
+any yes or no questions that you may encounter before actually being asked for
+a password, e.g. "Are you sure you want to continue connecting (yes/no)?" for
+first time connections, etc.
+
 B<error_handler(>I<sub ref>B<)>
 
 This sets up an error handler to catch any problems with a call to 'scp()'.  If you
 do not define an error handler, then a simple 'croak()' call will occur, with the last
-line sent to the terminal added as part of the error message.  The first argument
-passed to your sub will be the error message.
+line sent to the terminal added as part of the error message.
 
 I highly recommend you forcibly terminate your program somehow within your handler
 (via die, croak, exit, etc), otherwise your program may hang, as it sits there waiting
@@ -325,7 +349,7 @@ will be using 'scp' as an expensive form of 'cp'.
 
 There are several valid ways to use this method
 
-B<REMOTE TO LOCAL>
+B<LOCAL TO REMOTE>
 
 B<scp(>I<source, user@host:destination>B<);>
 
@@ -335,7 +359,7 @@ B<scp(>I<source, :destination>B<);> # User and host already defined
 
 B<scp(>I<source, destination>B<);> # Same as previous
 
-B<LOCAL TO REMOTE>
+B<REMOTE TO LOCAL>
 
 B<scp(>I<user@host:source, destination>B<);>
 
@@ -346,14 +370,19 @@ B<scp(>I<:source, destination>B<);>
 
 =head1 OPTIONS
 
-B<cipher> - Selects the cipher to use for encrypting the data transfer.
+B<auto_yes> - Set this to 1 if you want to automatically pass a 'yes' string to
+any yes or no questions that you may encounter before actually being asked for
+a password, e.g. "Are you sure you want to continue connecting (yes/no)?" for
+first time connections, etc.
 
-B<error_handler> - A sub ref that will be called when an 'scp()' call fails.  The
-first argument passed to your method will be the error message (which is, in fact,
-the last line of terminal output grabbed by Expect).
+B<cipher> - Selects the cipher to use for encrypting the data transfer.
 
 B<host> - Specify the host name.  This is now useful for both local-to-remote
 and remote-to-local transfers.
+
+B<no_check> - Set this to 1 if you want to turn off error checking.  Use this
+if you're absolutely positive you won't encounter any errors and you want to
+speed up your scp calls - up to 2 seconds per call (based on the defaults).
 
 B<password> - The password for the given login.
 
@@ -364,8 +393,18 @@ the original file.
 
 B<recursive> - Set to 1 if you want to recursively copy entire directories.
 
-B<timeout> - Sets the timeout value for your operation. The default
+B<timeout> - Sets the timeout value for your scp operation. The default
 is 10 seconds.
+
+B<timeout_auto> - Sets the timeout for the 'auto_yes' option.  I separated
+this from the standard timeout because generally you won't need nearly as much
+time as you would for a standard timeout, otherwise your script will drag
+considerably.  The default is 1 second (which should be plenty).
+
+B<timeout_err> - Sets the timeout for the additional error checking that the
+module does.  Because errors come back almost instantaneously, I thought it
+best to make this a separate option for the same reasons as the 'timeout_auto'
+option above.  The default is 1 second.
 
 B<user> - The login name you wish to use.
 
@@ -379,7 +418,10 @@ The -B option may NOT be set.  If you don't want to send passwords, I
 recommend using I<Net::SCP> instead.
 
 In the event that Ben Trott releases a version of I<Net::SSH::Perl> that
-supports scp, I recommend using that instead.
+supports scp, I recommend using that instead.  Why?  First, it will be
+a more secure way to perform scp.  Second, this module is not fast,
+even with error checking turned off.  Both reasons have to do with TTY
+interaction.
 
 Don't whine to me about putting passwords in scripts.  Set your
 permissions appropriately or use a .rc file of some kind.
@@ -396,9 +438,8 @@ A test suite (yes, I almost have one together) - no really, I promise!
 At least one user has reported warnings related to POD parsing with Perl 5.00503.
 These can be safely ignored.  They do not appear in Perl 5.6 or later.
 
-One user has reported a bug using OpenSSH 3.1p1 where it simply seems
-to fail for no good reason.  This may be a PAM issue, but I will try to get
-this worked out by release .04.
+I have one unconfirmed report of problems with wildcard characters.  I haven't
+had a chance to test this yet.
 
 =head1 THANKS
 

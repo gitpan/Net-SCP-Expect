@@ -17,7 +17,7 @@ $SIG{CHLD} = \&reapChild;
 
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '.11';
+   $VERSION = '.12';
 }
 
 # Options added as needed
@@ -165,9 +165,9 @@ sub scp{
    $flags .= "-p " if $preserve;
    $flags .= "-$protocol " if $protocol;
    $flags .= "-q ";  # Always pass this option (no progress meter)
-   $flags .= "-s " if $subsystem;
-   $flags .= "-o " if $option;
-   $flags .= "-i " if $identity_file;
+   $flags .= "-s $subsystem" if $subsystem;
+   $flags .= "-o $option" if $option;
+   $flags .= "-i $identity_file" if $identity_file;
 
    my $scp = Expect->new;
    #if($verbose){ $scp->raw_pty(1) }

@@ -17,7 +17,7 @@ $SIG{CHLD} = \&reapChild;
 
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '.06';
+   $VERSION = '.07';
 }
 
 # Options added as needed
@@ -232,7 +232,7 @@ sub scp{
       );
    }
    else{
-      scp->expect($timeout_err, ['eof' => sub { }]);
+      $scp->expect($timeout_err, ['eof' => sub { }]);
    }
 
    if($verbose){ print $scp->after(),"\n" }
@@ -448,6 +448,11 @@ These can be safely ignored.  They do not appear in Perl 5.6 or later.
 
 I have one unconfirmed report of problems with wildcard characters.  I haven't
 had a chance to test this yet.
+
+There is a parsing error if you try to insert the host/ip in a 'from/to' string
+within an 'scp()' call.  The workaround is to specify the host with the '-host'
+option and just use ':' in the 'scp()' call string.  This will be fixed in the
+next release.
 
 =head1 THANKS
 

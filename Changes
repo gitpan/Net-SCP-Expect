@@ -1,5 +1,12 @@
 Revision history for Perl extension Net-SCP-Expect
 
+0.07  Sun Jul 7 16:08:00 2002
+        - There was a syntax error (not picked up by "perl -c") with one of the
+	  timeout error checks.  Thanks to Scott Glaser for the spot and fix.
+
+	- Added "Term::ReadPassword" to the pre-req's in the Makefile.PL.  You
+ 	  can ignore this if you don't care about the test.
+
 0.06  Mon Jun 10 14:00:00 2002
         - Fixed a MAJOR bug in which the spawned scp process was being killed by
           the parent instead of waiting for the operation to complete.  Thanks to

@@ -19,3 +19,11 @@ Revision history for Perl extension Net-SCP-Expect
         - Tested with Expect 1.15 - seems to work
 
         - Fixed this distro so that it unpacks correctly. :)
+
+0.03  Wed April 10 08:04:17 2002
+        - Added better error handling in the event that a call to 'scp()' fails
+
+        - Added an 'error_handler' option/method so that programmers can trap
+          and deal with failed 'scp' calls on their own terms.  Just make sure
+          to die, croak, exit, etc. or your program may hang while waiting for
+          terminal input.

@@ -46,6 +46,20 @@ USAGE
     Creates a new object and optionally takes a series of options (see
     OPTIONS below).
 
+  METHODS
+
+    error_handler(*sub ref*)
+
+    This sets up an error handler to catch any problems with a call to
+    'scp()'. If you do not define an error handler, then a simple 'croak()'
+    call will occur, with the last line sent to the terminal added as part
+    of the error message. The first argument passed to your sub will be the
+    error message.
+
+    I highly recommend you forcibly terminate your program somehow within
+    your handler (via die, croak, exit, etc), otherwise your program may
+    hang, as it sits there waiting for terminal input.
+
     host(*host*)
 
     Sets the host for the current object
@@ -93,6 +107,11 @@ USAGE
 OPTIONS
     cipher - Selects the cipher to use for encrypting the data transfer.
 
+    error_handler - A sub ref that will be called when an 'scp()' call
+    fails. The first argument passed to your method will be the error
+    message (which is, in fact, the last line of terminal output grabbed by
+    Expect).
+
     host - Specify the host name. This is now useful for both
     local-to-remote and remote-to-local transfers.
 
@@ -128,12 +147,16 @@ FUTURE PLANS
     There are a few options I haven't implemented. If you *really* want to
     see them added, let me know and I'll see what I can do.
 
-    A test suite (yes, I almost have one together)
+    A test suite (yes, I almost have one together) - no really, I promise!
 
 KNOWN BUGS
     At least one user has reported warnings related to POD parsing with Perl
     5.00503. These can be safely ignored. They do not appear in Perl 5.6 or
     later.
+
+    One user has reported a bug using OpenSSH 3.1p1 where it simply seems to
+    fail for no good reason. This may be a PAM issue, but I will try to get
+    this worked out by release .04.
 
 THANKS
     Thanks to Roland Giersig (and Austin Schutz) for the Expect module. Very

@@ -20,7 +20,7 @@ Revision history for Perl extension Net-SCP-Expect
 
         - Fixed this distro so that it unpacks correctly. :)
 
-0.03  Wed April 10 08:04:17 2002
+0.03  Wed Apr 10 08:04:17 2002
         - Added better error handling in the event that a call to 'scp()' fails
 
         - Added an 'error_handler' option/method so that programmers can trap
@@ -28,7 +28,7 @@ Revision history for Perl extension Net-SCP-Expect
           to die, croak, exit, etc. or your program may hang while waiting for
           terminal input.
 
-0.04  Fri April 12 15:52:33 2002
+0.04  Fri Apr 12 15:52:33 2002
         - Documentation fixes and additions (thanks BbBoy)
 
         - Added an 'auto_yes' option/method so that you can automatically send
@@ -49,3 +49,10 @@ Revision history for Perl extension Net-SCP-Expect
         - The -q option is *actually* being passed automatically now (oops).  Don't
           fret - this made no difference in any of the testing that I actually did,
           but there it is for you.
+
+0.05  Mon Apr 29 15:10:49 2002
+        - Removed a lame -e check that was causing metacharacters to fail.  Any type
+          of non-existent file error will now be treated like any other error.
+
+        - Modified the error handling yet again.  There were two problems that were
+          worked out.  I'll just sum up by saying that it should work better now.

@@ -17,7 +17,7 @@ $SIG{CHLD} = \&reapChild;
 
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '.04';
+   $VERSION = '.05';
 }
 
 # Options added as needed
@@ -120,7 +120,7 @@ sub scp{
    my $auto_yes     = $self->_get('auto_yes');
    my $no_check     = $self->_get('no_check');
  
-   my($check,$file,$reverse);
+   my($file,$reverse);
 
    ##################################################################
    # If the second argument is not provided, the remote file will be
@@ -136,9 +136,6 @@ sub scp{
       $to = $from;
       $from = $temp;
       $reverse++;
-   }
-   else{
-      $check++;
    }
 
    if($to =~ /^(\w+)@(\w+):(.*?)$/){
@@ -165,11 +162,6 @@ sub scp{
 
    croak("No login. Can't scp") unless $login;
    croak("No password. Can't scp") unless $password;
-
-   # Don't check in a remote-to-local scenario
-   if($check){
-      croak("No such file: $from") unless -e $from;
-   }
 
    # Gather flags.
    my $flags;
@@ -214,21 +206,29 @@ sub scp{
    # terminal at this point means that something went wrong.
    #############################################################
    unless($no_check){
-      if($scp->expect($timeout_err,-re=>'[Pp]ass.*')){
-         my $error = $scp->before() || $scp->match();
-         if($handler){
-            $handler->($error);
-         }
-        croak("Error: Bad password");
-      }
 
-      if($scp->expect($timeout_err,'.*?')){
-         my $error = $scp->match();
-         if($handler){
-            $handler->($error);
-         }
-         croak("Error - last line returned was: $error");
-      }
+      $scp->expect($timeout_err,
+         [qr/[Pp]ass.*/ => sub{
+               my $error = $scp->before() || $scp->match();
+               if($handler){
+                  $handler->($error);
+               }
+               else{
+                  croak("Error: Bad password");
+               }
+            }
+         ],
+         [qr/\w+.*/ => sub{
+               my $error = $scp->match() || $scp->before();
+               if($handler){
+                  $handler->($error);
+               }
+               else{
+                  croak("Error - last line returned was: $error");
+               }
+            }
+         ],
+      );
    }
 
    if($verbose){ print $scp->after(),"\n" }

@@ -1,191 +1,56 @@
-NAME
-    Net::SCP::Expect - Wrapper for scp that allows passwords via Expect.
-
-SYNOPSIS
-    Example 1 - uses login method, longhand scp:
-
-    "my $scpe = Net::SCP::Expect->new;"
-
-    "$scpe->login('user name', 'password');"
-
-    "$scpe->scp('file','host:/some/dir');"
-
-    .
-
-    Example 2 - uses constructor, shorthand scp:
-
-    "my $scpe = Net::SCP::Expect->new(host=>'host', user=>'user',
-    password=>'xxxx');"
-
-    "$scpe->scp('file','/some/dir'); # 'file' copied to 'host' at
-    '/some/dir'"
-
-    .
-
-    Example 3 - Copying from remote machine to local host
-
-    "my $scpe = Net::SCP::Expect->new(user=>'user',password=>'xxxx');"
-
-    "$scpe->scp('host:/some/dir/filename','newfilename');"
-
-    See the scp() method for more information on valid syntax.
-
-PREREQUISITES
-    Expect 1.14. May work with earlier versions, but was tested with 1.14
-    (and now 1.15) only.
-
-DESCRIPTION
-    This module is simply a wrapper around the scp call. The primary
-    difference between this module and *Net::SCP* is that you may send a
-    password programmatically, instead of being forced to deal with
-    interactive sessions.
-
-USAGE
-    Net::SCP::Expect->new(*option=>val*,...)
-
-    Creates a new object and optionally takes a series of options (see
-    OPTIONS below).
-
-  METHODS
-
-    auto_yes - Set this to 1 if you want to automatically pass a 'yes'
-    string to any yes or no questions that you may encounter before actually
-    being asked for a password, e.g. "Are you sure you want to continue
-    connecting (yes/no)?" for first time connections, etc.
-
-    error_handler(*sub ref*)
-
-    This sets up an error handler to catch any problems with a call to
-    'scp()'. If you do not define an error handler, then a simple 'croak()'
-    call will occur, with the last line sent to the terminal added as part
-    of the error message.
-
-    I highly recommend you forcibly terminate your program somehow within
-    your handler (via die, croak, exit, etc), otherwise your program may
-    hang, as it sits there waiting for terminal input.
-
-    host(*host*)
-
-    Sets the host for the current object
-
-    login(*login,password*)
-
-    If the login and password are not passed as options to the constructor,
-    they must be passed with this method (or set individually - see 'user'
-    and 'password' methods). If they were already set, this method will
-    overwrite them with the new values.
-
-    password(*password*)
-
-    Sets the password for the current user
-
-    user(*user*)
-
-    Sets the user for the current object
-
-    scp()
-
-    Copies the file from source to destination. If no host is specified, you
-    will be using 'scp' as an expensive form of 'cp'.
-
-    There are several valid ways to use this method
-
-    LOCAL TO REMOTE
-
-    scp(*source, user@host:destination*);
-
-    scp(*source, host:destination*); # User already defined
-
-    scp(*source, :destination*); # User and host already defined
-
-    scp(*source, destination*); # Same as previous
-
-    REMOTE TO LOCAL
-
-    scp(*user@host:source, destination*);
-
-    scp(*host:source, destination*);
-
-    scp(*:source, destination*);
-
-OPTIONS
-    auto_yes - Set this to 1 if you want to automatically pass a 'yes'
-    string to any yes or no questions that you may encounter before actually
-    being asked for a password, e.g. "Are you sure you want to continue
-    connecting (yes/no)?" for first time connections, etc.
-
-    cipher - Selects the cipher to use for encrypting the data transfer.
-
-    host - Specify the host name. This is now useful for both
-    local-to-remote and remote-to-local transfers.
-
-    no_check - Set this to 1 if you want to turn off error checking. Use
-    this if you're absolutely positive you won't encounter any errors and
-    you want to speed up your scp calls - up to 2 seconds per call (based on
-    the defaults).
-
-    password - The password for the given login.
-
-    port - Use the specified port.
-
-    preserve - Preserves modification times, access times, and modes from
-    the original file.
-
-    recursive - Set to 1 if you want to recursively copy entire directories.
-
-    timeout - Sets the timeout value for your scp operation. The default is
-    10 seconds.
-
-    timeout_auto - Sets the timeout for the 'auto_yes' option. I separated
-    this from the standard timeout because generally you won't need nearly
-    as much time as you would for a standard timeout, otherwise your script
-    will drag considerably. The default is 1 second (which should be
-    plenty).
-
-    timeout_err - Sets the timeout for the additional error checking that
-    the module does. Because errors come back almost instantaneously, I
-    thought it best to make this a separate option for the same reasons as
-    the 'timeout_auto' option above. The default is 1 second.
-
-    user - The login name you wish to use.
-
-    verbose - Set to 1 if you want verbose output sent to STDOUT.
-
-NOTES
-    The -q option (disable progress meter) is automatically passed to scp.
-
-    The -B option may NOT be set. If you don't want to send passwords, I
-    recommend using *Net::SCP* instead.
-
-    In the event that Ben Trott releases a version of *Net::SSH::Perl* that
-    supports scp, I recommend using that instead. Why? First, it will be a
-    more secure way to perform scp. Second, this module is not fast, even
-    with error checking turned off. Both reasons have to do with TTY
-    interaction.
-
-    Don't whine to me about putting passwords in scripts. Set your
-    permissions appropriately or use a .rc file of some kind.
-
-FUTURE PLANS
-    There are a few options I haven't implemented. If you *really* want to
-    see them added, let me know and I'll see what I can do.
-
-    A test suite (yes, I almost have one together) - no really, I promise!
-
-KNOWN BUGS
-    At least one user has reported warnings related to POD parsing with Perl
-    5.00503. These can be safely ignored. They do not appear in Perl 5.6 or
-    later.
-
-    I have one unconfirmed report of problems with wildcard characters. I
-    haven't had a chance to test this yet.
-
-THANKS
-    Thanks to Roland Giersig (and Austin Schutz) for the Expect module. Very
-    handy.
-
-AUTHOR
-    Daniel Berger
-
-    djberg96@hotmail.com
+Installation:
+============
+perl Makefile.PL
+make
+make test (optional)
+make install
+
+Potential problems:
+===================
+
+Large files don't copy
+----------------------
+Some folks have reported that large files either don't copy at all or will
+only copy when run as root.  All I can tell you is that in my own tests,
+copying a 40mb text file as a local (non-root) user worked fine.  I can only
+guess that it may have something to do with either the version of scp/openssl
+you are using or your setup.
+
+Globbing doesn't work
+---------------------
+A couple folks have reported that trying to do something like
+"scp('*.txt',host)" fails.  The test suite includes a glob test, as does
+the interactive test, both of which work fine on my system.  This could
+be related to the version of Perl that you are using (5.5.3 or earlier) or
+perhaps your version of Expect.
+
+It just seems to hang
+---------------------
+In some instances, specifying the wrong protocol can cause scp to hang,
+although it should timeout eventually.  In one case, the itest.pl program
+hung when scp'ing to a FreeBSD system.  I don't know the cause or the
+workaround.
+
+Reporting problems
+------------------
+If you are experiencing some sort of bug, please make sure that command-line
+scp works as expected in order to rule out a problem with scp itself.
+
+Otherwise, please include the following information with your bug report:
+
+Perl version (perl -v output)
+Platform
+Expect version
+SSH version of local and remote host (ssh -V)
+Description of problem
+Sample code, if possible
+Your full name (for a possible future credit) and email address
+
+The Interactive Test Script
+===========================
+I recommend deleting the test files after you've successfully completed the
+itest.pl script.  There are about 50 mb worth of files, wasting space on
+your filesystem.
+
+See the itest/README file for more details.
 

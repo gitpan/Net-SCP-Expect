@@ -1,5 +1,5 @@
 use strict;
-use Test::More tests => 17;
+use Test::More tests => 20;
 
 BEGIN{ use_ok('Net::SCP::Expect') }
 
@@ -25,3 +25,6 @@ is(undef,$scp->_get("timeout_err"),"timeout_err attribute");
 is(0,$scp->_get("no_check"),"no_check attribute");
 is(undef,$scp->_get("protocol"),"protocol");
 is("\n",$scp->_get("terminator"),"terminator");
+is(undef,$scp->_get("subsystem"),"subsystem attribute");
+is(undef,$scp->_get("option"),"option attribute");
+is(undef,$scp->_get("identity_file"),"identity_file attribute");

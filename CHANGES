@@ -1,4 +1,10 @@
 Revision history for Perl extension Net-SCP-Expect
+0.11  Mon Nov 22 18:09:29 2004
+- Added support for the -i, -s and -o options (identity file, subsystem
+and option, respectively).
+- Doc updates and modifications, including a recommendation to use the
+Net::SFTP module instead of this one if possible.
+
 0.10  Tue Aug 12 13:03:22 2003
 - Made the initial password string more generic, allowing text between the
   word "Password" (or "Passphrase") and the ':' character.  Thanks John Vogtle.

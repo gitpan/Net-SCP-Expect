@@ -119,10 +119,15 @@ OPTIONS
     host - Specify the host name. This is now useful for both
     local-to-remote and remote-to-local transfers.
 
+    identity_file - Specify the identify file to use.
+
     no_check - Set this to 1 if you want to turn off error checking. Use
     this if you're absolutely positive you won't encounter any errors and
     you want to speed up your scp calls - up to 2 seconds per call (based on
     the defaults).
+
+    option - Specify options from the config file.  This is the equivalent
+    of -o.
 
     password - The password for the given login.
 
@@ -132,6 +137,12 @@ OPTIONS
     the original file.
 
     recursive - Set to 1 if you want to recursively copy entire directories.
+
+    subsystem - Specify a subsystem to invoke on the remote system.  This
+    option is only valid with ssh2 and openssh afaik.
+
+    terminator - Set the string terminator that is attached to the end of the
+    password.  The default is a newline.
 
     timeout - Sets the timeout value for your scp operation. The default is
     10 seconds.
@@ -157,11 +168,14 @@ NOTES
     The -B option may NOT be set. If you don't want to send passwords, I
     recommend using *Net::SCP* instead.
 
-    In the event that Ben Trott releases a version of *Net::SSH::Perl* that
+    In the event that Dave Rolsky releases a version of *Net::SSH::Perl* that
     supports scp, I recommend using that instead. Why? First, it will be a
     more secure way to perform scp. Second, this module is not fast, even
     with error checking turned off. Both reasons have to do with TTY
     interaction.
+
+    Also see Net::SFTP by Dave Rolsky.  If that module suits your needs,
+    use it instead.
 
     Don't whine to me about putting passwords in scripts. Set your
     permissions appropriately or use a .rc file of some kind.
@@ -169,8 +183,6 @@ NOTES
 FUTURE PLANS
     There are a few options I haven't implemented. If you *really* want to
     see them added, let me know and I'll see what I can do.
-
-    A test suite (yes, I almost have one together) - no really, I promise!
 
 KNOWN BUGS
     At least one user has reported warnings related to POD parsing with Perl
@@ -180,6 +192,8 @@ KNOWN BUGS
     I have one unconfirmed report of problems with wildcard characters. I
     haven't had a chance to test this yet.
 
+    Probably not thread safe.  See RT bug #7567 by Adam Ruck.
+
 THANKS
     Thanks to Roland Giersig (and Austin Schutz) for the Expect module. Very
     handy.
@@ -188,11 +202,11 @@ LICENSE
     Net::SCP::Expect is licensed under the same terms as Perl itself
 
 COPYRIGHT
-    (C) 2003, Daniel J. Berger, All Rights Reserved
+    (C) 2003, 2004 Daniel J. Berger, All Rights Reserved
 
 AUTHOR
     Daniel Berger
 
     djberg96 at yahoo dot com
 
-    rubyhacker1 on IRC
+    imperator on IRC

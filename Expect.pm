@@ -17,7 +17,7 @@ $SIG{CHLD} = \&reapChild;
 
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '.10';
+   $VERSION = '.11';
 }
 
 # Options added as needed
@@ -41,6 +41,9 @@ sub new{
       _timeout_err   => $arg{timeout_err} || undef,
       _no_check      => $arg{no_check} || 0,
       _protocol      => $arg{protocol} || undef,
+      _identity_file => $arg{identity_file} || undef,
+      _option        => $arg{option} || undef,
+      _subsystem     => $arg{subsystem} || undef,
    };
 
    bless($self,$class);
@@ -122,6 +125,9 @@ sub scp{
    my $no_check     = $self->_get('no_check');
    my $terminator   = $self->_get('terminator');
    my $protocol     = $self->_get('protocol');
+   my $identity_file = $self->_get('identity_file');
+   my $option        = $self->_get('option');
+   my $subsystem     = $self->_get('subsystem');
  
    ##################################################################
    # If the second argument is not provided, the remote file will be
@@ -159,6 +165,9 @@ sub scp{
    $flags .= "-p " if $preserve;
    $flags .= "-$protocol " if $protocol;
    $flags .= "-q ";  # Always pass this option (no progress meter)
+   $flags .= "-s " if $subsystem;
+   $flags .= "-o " if $option;
+   $flags .= "-i " if $identity_file;
 
    my $scp = Expect->new;
    #if($verbose){ $scp->raw_pty(1) }
@@ -202,7 +211,6 @@ sub scp{
 
       $scp->expect($timeout_err,
          [qr/[Pp]ass.*/ => sub{
-               print "WTF?\n";
                my $error = $scp->before() || $scp->match();
                if($handler){
                   $handler->($error);
@@ -394,9 +402,14 @@ B<cipher> - Selects the cipher to use for encrypting the data transfer.
 B<host> - Specify the host name.  This is now useful for both local-to-remote
 and remote-to-local transfers.
 
+B<identity_file> - Specify the identify file to use.
+
 B<no_check> - Set this to 1 if you want to turn off error checking.  Use this
 if you're absolutely positive you won't encounter any errors and you want to
 speed up your scp calls - up to 2 seconds per call (based on the defaults).
+
+B<option> - Specify options from the config file.  This is the equivalent
+of -o.
 
 B<password> - The password for the given login.
 
@@ -409,6 +422,9 @@ B<protocol> - Specify the ssh protocol to use for scp.  The default is undef,
 which simply means scp will use whatever it normally would use.
 
 B<recursive> - Set to 1 if you want to recursively copy entire directories.
+
+B<subsystem> - Specify a subsystem to invoke on the remote system.  This
+option is only valid with ssh2 and openssh afaik.
 
 B<terminator> - Set the string terminator that is attached to the end of the
 password.  The default is a newline.
@@ -442,11 +458,14 @@ The -q option (disable progress meter) is automatically passed to scp.
 The -B option may NOT be set.  If you don't want to send passwords, I
 recommend using I<Net::SCP> instead.
 
-In the event that Ben Trott releases a version of I<Net::SSH::Perl> that
+In the event that Dave Rolsky releases a version of I<Net::SSH::Perl> that
 supports scp, I recommend using that instead.  Why?  First, it will be
 a more secure way to perform scp.  Second, this module is not fast,
 even with error checking turned off.  Both reasons have to do with TTY
 interaction.
+
+Also, please see the Net::SFTP module from Dave Rolsky.  If this suits
+your needs, use it instead.
 
 =head1 FUTURE PLANS
 
@@ -457,6 +476,8 @@ see them added, let me know and I'll see what I can do.
 
 At least one user has reported warnings related to POD parsing with Perl 5.00503.
 These can be safely ignored.  They do not appear in Perl 5.6 or later.
+
+Probably not thread safe. See RT bug #7567 from Adam Ruck.
 
 See the README file for more on possible bugs you may encounter.
 
@@ -471,7 +492,7 @@ See the Changes file for specifics.
 Net::SCP::Expect is licensed under the same terms as Perl itself.
 
 =head1 COPYRIGHT
-(C) 2003, Daniel J. Berger, All Rights Reserved
+(C) 2003, 2004 Daniel J. Berger, All Rights Reserved
 
 =head1 AUTHOR
 
@@ -479,4 +500,4 @@ Daniel Berger
 
 djberg96 at yahoo dot com
 
-rubyhacker1 on IRC
+imperator on IRC

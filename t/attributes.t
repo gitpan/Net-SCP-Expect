@@ -1,5 +1,5 @@
 use strict;
-use Test::More tests => 20;
+use Test::More tests => 22;
 
 BEGIN{ use_ok('Net::SCP::Expect') }
 
@@ -28,3 +28,5 @@ is("\n",$scp->_get("terminator"),"terminator");
 is(undef,$scp->_get("subsystem"),"subsystem attribute");
 is(undef,$scp->_get("option"),"option attribute");
 is(undef,$scp->_get("identity_file"),"identity_file attribute");
+is(1,$scp->_get("auto_quote"),"auto_quote attribute");
+is(undef,$scp->_get("scp_path"),"scp_path attribute");

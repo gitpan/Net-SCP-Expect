@@ -1,4 +1,34 @@
 Revision history for Perl extension Net-SCP-Expect
+
+0.13  Wednesday June 11 05:07:34 2008
+- Corrected issue with no exception thrown on failed scp execution after
+successful login.  In general, exception handling should be more robust
+and behave more consistently now.
+
+- If an error_handler is defined, will now immediately return void from a
+scp() call after the handler has executed.
+
+- Fixed RT#18077 (error_handler not handing timeouts properly). Also added
+immediate return from scp function if customer handler used, as no further
+actions may be taken.
+
+- Fixed RT#22907 (Some options require trailing space).
+
+- Fixed RT#22909 (scp command string is underquoted). Use option 'auto_quote'
+to enable auto-quote scp arguments.  Also escapes other single quotes to
+insure support for path names with single quotes.  NOTE: This option is
+enabled by default, which may break for backward compatibility with scripts
+that manually quoted input arguments as a work-around for this bug.
+
+- Fixed RT#24273 (scp binary is hardcoded, cannot specify a different path to
+scp).  Use option 'scp_path' to specify a different SCP binary.
+
+- Fixed RT#34001 (exit value is automatically set to -1 (255) when a program
+including threads uses 'Net::SCP::Expect' - this breaks Test::*).  Removed
+CHLD signal handler, instead relying on Expect to manage process exit cleanup.
+
+- Fixed RT#34503 (Destination can't contain colon ':').
+
 0.12  Wednesday Nov 24 08:03:33 2004
 - Dumb bug fix.
 

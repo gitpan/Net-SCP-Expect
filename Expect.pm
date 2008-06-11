@@ -8,16 +8,13 @@
 package Net::SCP::Expect;
 use strict;
 use Expect;
-use POSIX qw(:signal_h WNOHANG);
 use File::Basename;
 use Carp;
 use Cwd;
 
-$SIG{CHLD} = \&reapChild;
-
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '.12';
+   $VERSION = '0.13';
 }
 
 # Options added as needed
@@ -44,6 +41,8 @@ sub new{
       _identity_file => $arg{identity_file} || undef,
       _option        => $arg{option} || undef,
       _subsystem     => $arg{subsystem} || undef,
+      _scp_path      => $arg{scp_path} || undef,
+      _auto_quote    => $arg{auto_quote} || 1,
    };
 
    bless($self,$class);
@@ -128,6 +127,8 @@ sub scp{
    my $identity_file = $self->_get('identity_file');
    my $option        = $self->_get('option');
    my $subsystem     = $self->_get('subsystem');
+   my $scp_path      = $self->_get('scp_path');
+   my $auto_quote    = $self->_get('auto_quote');
  
    ##################################################################
    # If the second argument is not provided, the remote file will be
@@ -155,26 +156,43 @@ sub scp{
    croak("No password. Can't scp") unless $password;
    croak("No host specified. Can't scp") unless $host;
 
+   # Define argument auto-quote
+   my $qt = $auto_quote ? '\'' : '';
+
    # Gather flags.
    my $flags;
 
-   $flags .= "-c $cipher " if $cipher;
-   $flags .= "-P $port " if $port;
+   $flags .= "-c $qt$cipher$qt " if $cipher;
+   $flags .= "-P $qt$port$qt " if $port;
    $flags .= "-r " if $recursive;
    $flags .= "-v " if $verbose;
    $flags .= "-p " if $preserve;
-   $flags .= "-$protocol " if $protocol;
+   $flags .= "-$qt$protocol$qt " if $protocol;
    $flags .= "-q ";  # Always pass this option (no progress meter)
-   $flags .= "-s $subsystem" if $subsystem;
-   $flags .= "-o $option" if $option;
-   $flags .= "-i $identity_file" if $identity_file;
+   $flags .= "-s $qt$subsystem$qt " if $subsystem;
+   $flags .= "-o $qt$option$qt " if $option;
+   $flags .= "-i $qt$identity_file$qt " if $identity_file;
 
    my $scp = Expect->new;
    #if($verbose){ $scp->raw_pty(1) }
    #$scp->debug(1);
 
-   my $scp_string = "scp $flags $from $to";
-   $scp = Expect->spawn($scp_string) or croak "Couldn't start program: $!\n";
+   # Use scp specified by the user, if possible
+   $scp_path = defined $scp_path ? "$qt$scp_path$qt" : "scp ";
+
+   # Escape quotes
+   if ($auto_quote) {
+      $from =~ s/'/'"'"'/go;
+      $to =~ s/'/'"'"'/go;
+   }
+
+   my $scp_string = "$scp_path $flags $qt$from$qt $qt$to$qt";
+   $scp = Expect->spawn($scp_string);
+   
+   unless ($scp) {
+      if($handler){ $handler->($!); return; }
+      else { croak("Couldn't start program: $!"); }
+   }
 
    $scp->log_stdout(0);
 
@@ -187,10 +205,12 @@ sub scp{
    unless($scp->expect($timeout,-re=>'[Pp]assword.*?:|[Pp]assphrase.*?:')){
       my $err = $scp->before() || $scp->match();
       if($err){
-         if($handler){ $handler->($err) }
-         croak("Problem performing scp: $err");
+         if($handler){ $handler->($err); return; }
+         else { croak("Problem performing scp: $err"); }
       }
-      croak("scp timed out while trying to connect to $host");
+      $err = "scp timed out while trying to connect to $host";
+      if($handler){ $handler->($err); return; }
+      else{ croak($err) };
    }
 
    if($verbose){ print $scp->before() }
@@ -207,13 +227,16 @@ sub scp{
    # The exception to this is verbose output, which can mistakenly
    # be picked up by Expect.
    ################################################################
+   my $error;
+   my $eof = 0;
    unless($no_check || $verbose){
 
-      $scp->expect($timeout_err,
+      $error = ($scp->expect($timeout_err,
          [qr/[Pp]ass.*/ => sub{
                my $error = $scp->before() || $scp->match();
                if($handler){
                   $handler->($error);
+                  return;
                }
                else{
                   croak("Error: Bad password [$error]");
@@ -224,22 +247,46 @@ sub scp{
                my $error = $scp->match() || $scp->before();
                if($handler){
                   $handler->($error);
+                  return;
                }
                else{
-                  croak("Error - last line returned was: $error");
+                  croak("Error: last line returned was: $error");
                }
             }
          ],
-         ['eof' => sub{} ],
-      );
+         ['eof' => sub{ $eof = 1 } ],
+      ))[1];
    }
    else{
-      $scp->expect($timeout_err, ['eof' => sub { }]);
+      $error = ($scp->expect($timeout_err, ['eof' => sub { $eof = 1 }]))[1];
    }
 
    if($verbose){ print $scp->after(),"\n" }
 
+   # Ignore error if it was due to scp auto-exiting successfully (which may trigger false positives on some platforms)
+   if ($error && !($eof && $error =~ m/^(2|3)/o)) {
+      if ($handler) {
+         $handler->($error);
+         return;
+      }
+      else {
+         croak("scp processing error occured: $error");
+      }
+   }
+   
+   # Insure we check exit state of process
    $scp->hard_close();
+
+   if ($scp->exitstatus > 0) {   #ignore -1, in case there's a waitpid portability issue
+      if ($handler) {
+         $handler->($scp->exitstatus);
+         return;
+      }
+      else {
+         croak("scp exited with non-success state: " . $scp->exitstatus);
+      }
+   }
+
    return 1;
 }
 
@@ -249,7 +296,7 @@ sub _parse_scp_string{
    my @parts;
    my($user,$host,$dest);
 
-   @parts = split(/@/,$string);
+   @parts = split(/@/,$string,2);
    if(scalar(@parts) == 2){
       $user = shift(@parts);
    }
@@ -258,7 +305,7 @@ sub _parse_scp_string{
    }
 
    my $temp = join('',@parts);
-   ($host,$dest) = split(/:/,$temp);
+   ($host,$dest) = split(/:/,$temp,2);
 
    # scp('file','file') syntax, where local to remote is assumed
    unless($dest){
@@ -268,10 +315,6 @@ sub _parse_scp_string{
 
    $host ||= $self->_get("host");
    return ($user,$host,$dest);
-}
-
-sub reapChild{
-   do {} while waitpid(-1,WNOHANG) > 0;
 }
 1;
 __END__
@@ -284,28 +327,19 @@ Net::SCP::Expect - Wrapper for scp that allows passwords via Expect.
 
 B<Example 1 - uses login method, longhand scp:>
 
-C<< my $scpe = Net::SCP::Expect->new; >>
-
-C<< $scpe->login('user name', 'password'); >>
-
-C<< $scpe->scp('file','host:/some/dir'); >>
-
-
+ my $scpe = Net::SCP::Expect->new;
+ $scpe->login('user name', 'password');
+ $scpe->scp('file','host:/some/dir');
 
 B<Example 2 - uses constructor, shorthand scp:>
 
-C<< my $scpe = Net::SCP::Expect->new(host=>'host', user=>'user', password=>'xxxx'); >>
+ my $scpe = Net::SCP::Expect->new(host=>'host', user=>'user', password=>'xxxx');
+ $scpe->scp('file','/some/dir'); # 'file' copied to 'host' at '/some/dir'
 
-C<< $scpe->scp('file','/some/dir'); # 'file' copied to 'host' at '/some/dir' >>
+B<Example 3 - copying from remote machine to local host>
 
-
-
-B<Example 3 - Copying from remote machine to local host>
-
-C<< my $scpe = Net::SCP::Expect->new(user=>'user',password=>'xxxx'); >>
-
-C<< $scpe->scp('host:/some/dir/filename','newfilename'); >>
-
+ my $scpe = Net::SCP::Expect->new(user=>'user',password=>'xxxx');
+ $scpe->scp('host:/some/dir/filename','newfilename');
 
 See the B<scp()> method for more information on valid syntax.
 
@@ -324,54 +358,56 @@ of being forced to deal with interactive sessions.
 
 =head1 USAGE
 
-B<Net::SCP::Expect-E<gt>new(>I<option=E<gt>val>,...B<)>
+=head2 B<Net::SCP::Expect-E<gt>new(>I<option=E<gt>val>, ...B<)>
 
-Creates a new object and optionally takes a series of options (see OPTIONS below).
+Creates a new object and optionally takes a series of options (see L<"OPTIONS"> below).
+All L<"OBJECT METHODS"> apply to this constructor.
 
-=head2 METHODS
+=head1 OBJECT METHODS
 
-B<auto_yes> - Set this to 1 if you want to automatically pass a 'yes' string to
+=head2 B<auto_yes>
+
+Set this to 1 if you want to automatically pass a 'yes' string to
 any yes or no questions that you may encounter before actually being asked for
 a password, e.g. "Are you sure you want to continue connecting (yes/no)?" for
 first time connections, etc.
 
-B<error_handler(>I<sub ref>B<)>
+=head2 B<error_handler(>I<sub ref>B<)>
 
 This sets up an error handler to catch any problems with a call to 'scp()'.  If you
 do not define an error handler, then a simple 'croak()' call will occur, with the last
 line sent to the terminal added as part of the error message.
 
-I highly recommend you forcibly terminate your program somehow within your handler
-(via die, croak, exit, etc), otherwise your program may hang, as it sits there waiting
-for terminal input.
+The method will immediately return with a void value after your error handler has been
+called.
 
-B<host(>I<host>B<)>
+=head2 B<host(>I<host>B<)>
 
 Sets the host for the current object
 
-B<login(>I<login,password>B<)>
+=head2 B<login(>I<login, password>B<)>
 
 If the login and password are not passed as options to the constructor, they
 must be passed with this method (or set individually - see 'user' and 'password'
 methods).  If they were already set, this method will overwrite them with the new
 values.
 
-B<password(>I<password>B<)>
+=head2 B<password(>I<password>B<)>
 
 Sets the password for the current user
 
-B<user(>I<user>B<)>
+=head2 B<user(>I<user>B<)>
 
 Sets the user for the current object
 
-B<scp()>
+=head2 B<scp()>
 
 Copies the file from source to destination.  If no host is specified, you
 will be using 'scp' as an expensive form of 'cp'.
 
 There are several valid ways to use this method
 
-B<LOCAL TO REMOTE>
+=head3 Local to Remote
 
 B<scp(>I<source, user@host:destination>B<);>
 
@@ -381,7 +417,7 @@ B<scp(>I<source, :destination>B<);> # User and host already defined
 
 B<scp(>I<source, destination>B<);> # Same as previous
 
-B<REMOTE TO LOCAL>
+=head3 Remote to Local
 
 B<scp(>I<user@host:source, destination>B<);>
 
@@ -389,8 +425,15 @@ B<scp(>I<host:source, destination>B<);>
 
 B<scp(>I<:source, destination>B<);>
 
-
 =head1 OPTIONS
+
+B<auto_quote> - Auto-encapsulate all option values and scp from/to arguments in
+single-quotes to insure that special characters, such as spaces in file names,
+do not cause inadvertant shell exceptions.  Default is enabled.
+Note: Be aware that this feature may break backward compatibility with scripts
+that manually quoted input arguments to work around unquoted argument limitations
+in 0.12 or earlier of this module; in such cases, try disabling it or update
+your script to take advantage of the auto_quote feature.
 
 B<auto_yes> - Set this to 1 if you want to automatically pass a 'yes' string to
 any yes or no questions that you may encounter before actually being asked for
@@ -422,6 +465,9 @@ B<protocol> - Specify the ssh protocol to use for scp.  The default is undef,
 which simply means scp will use whatever it normally would use.
 
 B<recursive> - Set to 1 if you want to recursively copy entire directories.
+
+B<scp_path> - The path for the scp binary to use, i.e.: /usr/bin/scp, defaults
+to use the first scp on your $PATH variable.
 
 B<subsystem> - Specify a subsystem to invoke on the remote system.  This
 option is only valid with ssh2 and openssh afaik.
@@ -472,32 +518,43 @@ your needs, use it instead.
 There are a few options I haven't implemented.  If you *really* want to
 see them added, let me know and I'll see what I can do.
 
-=head1 KNOWN BUGS
+Add exception handling tests to the interactive test suite.
+
+=head1 KNOWN ISSUES
 
 At least one user has reported warnings related to POD parsing with Perl 5.00503.
 These can be safely ignored.  They do not appear in Perl 5.6 or later.
 
 Probably not thread safe. See RT bug #7567 from Adam Ruck.
 
-See the README file for more on possible bugs you may encounter.
-
 =head1 THANKS
 
 Thanks to Roland Giersig (and Austin Schutz) for the Expect module.  Very handy.
 
 Thanks also go out to all those who have submitted bug reports and/or patches.
-See the Changes file for specifics.
+See the CHANGES file for specifics.
 
 =head1 LICENSE
+
 Net::SCP::Expect is licensed under the same terms as Perl itself.
 
 =head1 COPYRIGHT
-(C) 2003, 2004 Daniel J. Berger, All Rights Reserved
 
-=head1 AUTHOR
+2005-2007 Eric Rybski <rybskej@yahoo.com>,
+2003-2004 Daniel J. Berger.
+
+=head1 CURRENT AUTHOR AND MAINTAINER
+
+Eric Rybski <rybskej@yahoo.com>.  Please send all module inquries to me.
+
+=head1 ORIGINAL AUTHOR
 
 Daniel Berger
 
 djberg96 at yahoo dot com
 
 imperator on IRC
+
+=head1 SEE ALSO
+
+L<Net::SCP>, L<Net::SFTP>, L<Net::SSH::Perl>, L<Net::SSH2>

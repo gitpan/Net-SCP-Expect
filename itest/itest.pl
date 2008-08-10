@@ -21,12 +21,47 @@ my $errors = 0; # Tracks total number of failures.
 
 my $small_file  = "small_file.test";
 my $rsmall_file  = "small_file.remote";
+my $small_file2  = "small_file2.test";
+my $small_file3  = "small_file3.test";
 
 my $medium_file = "medium_file.test";
 my $rmedium_file = "medium_file.remote";
 
 my $large_file  = "large_file.test";
 my $rlarge_file  = "large_file.remote";
+
+##################################################
+# Generate test files if they don't already exist
+##################################################
+
+my $file_contents = <<FILE;
+This is the small file
+For use in testing Net::SCP::Expect only
+Delete at your convenience
+FILE
+foreach ($small_file, $small_file2, $small_file3) {
+    unless (-f $_) {
+        open(FILE, ">$_") or die "Couldn't create file [$_]: $!";
+        print FILE $file_contents for 1..56; #~5KB
+        close FILE;
+    }
+}
+
+unless (-f $medium_file) {
+    open(FILE, ">$medium_file") or die "Couldn't create file [$medium_file]: $!";
+    print FILE $file_contents for 1..13564; #~1MB
+    close FILE;
+}
+    
+unless (-f $large_file) {
+    open(FILE, ">$large_file") or die "Couldn't create file [$large_file]: $!";
+    print FILE $file_contents for 1..461176; #~40MB
+    close FILE;
+}
+
+######################
+# Interactive section
+######################
 
 print "\nHost to copy test files to/from: ";
 my $host = <STDIN>;

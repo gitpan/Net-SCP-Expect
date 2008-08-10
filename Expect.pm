@@ -14,7 +14,7 @@ use Cwd;
 
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '0.13';
+   $VERSION = '0.14';
 }
 
 # Options added as needed
@@ -76,7 +76,7 @@ sub login{
    my($self,$user,$password) = @_;
    
    croak("No user supplied to 'login()' method") unless defined $user;
-   croak("No password supplied to 'password()' method") unless defined $password;
+   croak("No password supplied to 'login()' method") if @_ > 2 && !defined $password;
 
    $self->_set('user',$user);
    $self->_set('password',$password);
@@ -84,9 +84,9 @@ sub login{
 
 sub password{
    my($self,$password) = @_;
-   croak("No password supplied to 'password()' method") unless $password;
+   croak("No password supplied to 'password()' method");
    
-   $self->_set('password',$password);
+   $self->_set('password',$password) unless $password;
 }
 
 sub host{
@@ -153,7 +153,7 @@ sub scp{
    }
 
    croak("No login. Can't scp") unless $login;
-   croak("No password. Can't scp") unless $password;
+   croak("No password or identity file. Can't scp") unless $password || $identity_file;
    croak("No host specified. Can't scp") unless $host;
 
    # Define argument auto-quote
@@ -202,22 +202,24 @@ sub scp{
       }
    }
 
-   unless($scp->expect($timeout,-re=>'[Pp]assword.*?:|[Pp]assphrase.*?:')){
-      my $err = $scp->before() || $scp->match();
-      if($err){
+   if ($password) {
+      unless($scp->expect($timeout,-re=>'[Pp]assword.*?:|[Pp]assphrase.*?:')){
+         my $err = $scp->before() || $scp->match();
+         if($err){
+            if($handler){ $handler->($err); return; }
+            else { croak("Problem performing scp: $err"); }
+         }
+         $err = "scp timed out while trying to connect to $host";
          if($handler){ $handler->($err); return; }
-         else { croak("Problem performing scp: $err"); }
+         else{ croak($err) };
       }
-      $err = "scp timed out while trying to connect to $host";
-      if($handler){ $handler->($err); return; }
-      else{ croak($err) };
+
+      if($verbose){ print $scp->before() }
+
+      $password .= $terminator if $terminator;
+
+      $scp->send($password);
    }
-
-   if($verbose){ print $scp->before() }
-
-   $password .= $terminator if $terminator;
-
-   $scp->send($password);
 
    ################################################################
    # Check to see if we sent the correct password, or if we got
@@ -390,11 +392,12 @@ Sets the host for the current object
 If the login and password are not passed as options to the constructor, they
 must be passed with this method (or set individually - see 'user' and 'password'
 methods).  If they were already set, this method will overwrite them with the new
-values.
+values.  Password will not be changed if only one argument is passed (user).
 
 =head2 B<password(>I<password>B<)>
 
-Sets the password for the current user
+Sets the password for the current user, or the passphrase for the identify file if
+identity_file option is specified in the constructor
 
 =head2 B<user(>I<user>B<)>
 
@@ -454,7 +457,10 @@ speed up your scp calls - up to 2 seconds per call (based on the defaults).
 B<option> - Specify options from the config file.  This is the equivalent
 of -o.
 
-B<password> - The password for the given login.
+B<password> - The password for the given login.  If not specified, then
+identity_file must be specified or an error will occur on login.  If both
+identity_file and password are specified, the password will be treated as the
+passphrase for the identity file.
 
 B<port> - Use the specified port.
 
@@ -501,12 +507,12 @@ could otherwise be picked up by expect itself.
 
 The -q option (disable progress meter) is automatically passed to scp.
 
-The -B option may NOT be set.  If you don't want to send passwords, I
-recommend using I<Net::SCP> instead.
+The -B option may NOT be set.  If you don't plan to send passwords or use
+identity files (with passphrases), consider using I<Net::SCP> instead.
 
-In the event that Dave Rolsky releases a version of I<Net::SSH::Perl> that
-supports scp, I recommend using that instead.  Why?  First, it will be
-a more secure way to perform scp.  Second, this module is not fast,
+In the event a new version of I<Net::SSH::Perl> is released that
+supports scp, I recommend using that instead.  Why?  First, it should be
+a more secure way to perform scp.  Second, this module is not the fastest,
 even with error checking turned off.  Both reasons have to do with TTY
 interaction.
 
@@ -540,7 +546,7 @@ Net::SCP::Expect is licensed under the same terms as Perl itself.
 
 =head1 COPYRIGHT
 
-2005-2007 Eric Rybski <rybskej@yahoo.com>,
+2005-2008 Eric Rybski <rybskej@yahoo.com>,
 2003-2004 Daniel J. Berger.
 
 =head1 CURRENT AUTHOR AND MAINTAINER

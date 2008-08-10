@@ -64,7 +64,8 @@ OBJECT METHODS
     overwrite them with the new values.
 
   password(*password*)
-    Sets the password for the current user
+    Sets the password for the current user, or the passphrase for the
+    identify file if identity_file option is specified in the constructor
 
   user(*user*)
     Sets the user for the current object
@@ -121,7 +122,10 @@ OPTIONS
     option - Specify options from the config file. This is the equivalent of
     -o.
 
-    password - The password for the given login.
+    password - The password for the given login. If not specified, then
+    identity_file must be specified or an error will occur on login. If both
+    identity_file and password are specified, the password will be treated
+    as the passphrase for the identity file.
 
     port - Use the specified port.
 
@@ -169,13 +173,13 @@ OPTIONS
 NOTES
     The -q option (disable progress meter) is automatically passed to scp.
 
-    The -B option may NOT be set. If you don't want to send passwords, I
-    recommend using *Net::SCP* instead.
+    The -B option may NOT be set. If you don't plan to send passwords or use
+    identity files (with passphrases), consider using *Net::SCP* instead.
 
-    In the event that Dave Rolsky releases a version of *Net::SSH::Perl*
-    that supports scp, I recommend using that instead. Why? First, it will
-    be a more secure way to perform scp. Second, this module is not fast,
-    even with error checking turned off. Both reasons have to do with TTY
+    In the event a new version of *Net::SSH::Perl* is released that supports
+    scp, I recommend using that instead. Why? First, it should be a more
+    secure way to perform scp. Second, this module is not the fastest, even
+    with error checking turned off. Both reasons have to do with TTY
     interaction.
 
     Also, please see the Net::SFTP module from Dave Rolsky. If this suits
@@ -205,7 +209,7 @@ LICENSE
     Net::SCP::Expect is licensed under the same terms as Perl itself.
 
 COPYRIGHT
-    2005-2007 Eric Rybski <rybskej@yahoo.com>, 2003-2004 Daniel J. Berger.
+    2005-2008 Eric Rybski <rybskej@yahoo.com>, 2003-2004 Daniel J. Berger.
 
 CURRENT AUTHOR AND MAINTAINER
     Eric Rybski <rybskej@yahoo.com>. Please send all module inquries to me.

@@ -1,5 +1,9 @@
 Revision history for Perl extension Net-SCP-Expect
 
+0.14  
+- Fixed RT#38081 (password not required if identity_file specified).
+- Fixed RT#36705 (itest.pl dynamically generates test files during runtime to reduce distribution size).
+
 0.13  Wednesday June 11 05:07:34 2008
 - Corrected issue with no exception thrown on failed scp execution after
 successful login.  In general, exception handling should be more robust

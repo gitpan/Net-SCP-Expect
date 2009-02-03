@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Net-SCP-Expect
-version:             0.14
+version:             0.15
 abstract:            Wrapper for scp that allows passwords via Expect.
 license:             ~
 author:              
@@ -9,6 +9,7 @@ generated_by:        ExtUtils::MakeMaker version 6.44
 distribution_type:   module
 requires:     
     Expect:                        1.14
+    Net::IPv6Addr:                 0.2
     Term::ReadPassword:            0.01
 meta-spec:
     url:     http://module-build.sourceforge.net/META-spec-v1.3.html

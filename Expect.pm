@@ -11,10 +11,11 @@ use Expect;
 use File::Basename;
 use Carp;
 use Cwd;
+use Net::IPv6Addr;
 
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '0.14';
+   $VERSION = '0.15';
 }
 
 # Options added as needed
@@ -43,6 +44,9 @@ sub new{
       _subsystem     => $arg{subsystem} || undef,
       _scp_path      => $arg{scp_path} || undef,
       _auto_quote    => $arg{auto_quote} || 1,
+      _compress      => $arg{compress} || 0,
+      _force_ipv4    => $arg{force_ipv4} || 0,
+      _force_ipv6    => $arg{force_ipv6} || 0,
    };
 
    bless($self,$class);
@@ -92,6 +96,10 @@ sub password{
 sub host{
    my($self,$host) = @_;
    croak("No host supplied to 'host()' method") unless $host;
+
+   # If host is an IPv6 address, strip any enclosing brackets if used
+   $host = substr($host, 1, length($host)-2) if $host && $host =~ /^\[/ && $host =~ /\]$/;
+
    $self->_set('host',$host);
 }
 
@@ -129,6 +137,9 @@ sub scp{
    my $subsystem     = $self->_get('subsystem');
    my $scp_path      = $self->_get('scp_path');
    my $auto_quote    = $self->_get('auto_quote');
+   my $compress      = $self->_get('compress');
+   my $force_ipv4    = $self->_get('force_ipv4');
+   my $force_ipv6    = $self->_get('force_ipv6');
  
    ##################################################################
    # If the second argument is not provided, the remote file will be
@@ -140,15 +151,15 @@ sub scp{
 
    my($host,$dest);
 
-   # Parse the to/from string. If the $from contains a ':', assume it is the remote host
+   # Parse the to/from string. If the $from contains a ':', assume it is a Remote to Local transfer
    if($from =~ /:/){
       ($login,$host,$dest) = $self->_parse_scp_string($from);
-      $from = "$login\@$host:";
+      $from = $login . '@' . $self->_format_host_string($host) . ':';
       $from .= "$dest" if $dest;
    }
-   else{
+   else{ # Local to Remote transfer
       ($login,$host,$dest) = $self->_parse_scp_string($to);
-      $to = "$login\@$host:";
+      $to = $login . '@' . $self->_format_host_string($host) . ':';
       $to .= "$dest" if $dest;
    }
 
@@ -172,6 +183,9 @@ sub scp{
    $flags .= "-s $qt$subsystem$qt " if $subsystem;
    $flags .= "-o $qt$option$qt " if $option;
    $flags .= "-i $qt$identity_file$qt " if $identity_file;
+   $flags .= "-C " if $compress;
+   $flags .= "-4 " if $force_ipv4;
+   $flags .= "-6 " if $force_ipv6;
 
    my $scp = Expect->new;
    #if($verbose){ $scp->raw_pty(1) }
@@ -307,7 +321,15 @@ sub _parse_scp_string{
    }
 
    my $temp = join('',@parts);
-   ($host,$dest) = split(/:/,$temp,2);
+   @parts = split(/:/,$temp);
+   if (@parts) {
+      if (@parts > 1) {
+         $host = join('',@parts[0,1..scalar(@parts)-2]);
+         $dest = $parts[-1];
+      } else {
+         $host = $parts[0];
+      }
+   }
 
    # scp('file','file') syntax, where local to remote is assumed
    unless($dest){
@@ -316,7 +338,24 @@ sub _parse_scp_string{
    }
 
    $host ||= $self->_get("host");
+
+   # If host is an IPv6 address, strip any enclosing brackets if used
+   $host = substr($host, 1, length($host)-2) if $host && $host =~ /^\[/ && $host =~ /\]$/;
+
    return ($user,$host,$dest);
+}
+
+sub _format_host_string{
+   my ($self,$host) = @_;
+
+   # If host is an IPv6 address, verify it is correctly formatted for scp
+   if ($host) {
+      $host = substr($host, 1, length($host)-2) if $host =~ /^\[/ && $host =~ /\]$/;
+      local $@;
+      $host = "[$host]" if eval { Net::IPv6Addr::ipv6_parse($host) };
+   }
+
+   return $host;
 }
 1;
 __END__
@@ -342,6 +381,12 @@ B<Example 3 - copying from remote machine to local host>
 
  my $scpe = Net::SCP::Expect->new(user=>'user',password=>'xxxx');
  $scpe->scp('host:/some/dir/filename','newfilename');
+
+B<Example 4 - uses login method, longhand scp, IPv6 compatible:>
+
+ my $scpe = Net::SCP::Expect->new;
+ $scpe->login('user name', 'password');
+ $scpe->scp('file','[ipv6-host]:/some/dir'); # <-- Important: scp() with explicit IPv6 host in to or from address must use square brackets
 
 See the B<scp()> method for more information on valid syntax.
 
@@ -412,19 +457,29 @@ There are several valid ways to use this method
 
 =head3 Local to Remote
 
-B<scp(>I<source, user@host:destination>B<);>
+B<scp(>I<source, user@host:destination>B<);> 
+
+B<scp(>I<source, user@[ipv6-host]:destination>B<);>  # Same as previous, with IPv6 host
 
 B<scp(>I<source, host:destination>B<);> # User already defined
+
+B<scp(>I<source, [ipv6-host]:destination>B<);> # Same as previous, with IPv6 host
 
 B<scp(>I<source, :destination>B<);> # User and host already defined
 
 B<scp(>I<source, destination>B<);> # Same as previous
 
+B<scp(>I<source>B<);> # Same as previous; destination will use base name of source
+
 =head3 Remote to Local
 
 B<scp(>I<user@host:source, destination>B<);>
 
+B<scp(>I<user@[ipv6-host]:source, destination>B<);> # Same as previous, with IPv6 host
+
 B<scp(>I<host:source, destination>B<);>
+
+B<scp(>I<[ipv6-host]:source, destination>B<);> # Same as previous, with IPv6 host
 
 B<scp(>I<:source, destination>B<);>
 
@@ -445,8 +500,16 @@ first time connections, etc.
 
 B<cipher> - Selects the cipher to use for encrypting the data transfer.
 
+B<compress> - Compression enable.  Passes the -C flag to ssh(1) to enable compression.
+
+B<force_ipv4> - Forces scp to use IPv4 addresses only.
+
+B<force_ipv6> - Forces scp to use IPv6 addresses only.
+
 B<host> - Specify the host name.  This is now useful for both local-to-remote
-and remote-to-local transfers.
+and remote-to-local transfers.  For IPv6 addresses, either regular or square-bracket
+encapsulated host are allowed (since command-line scp normally expects IPv6
+addresses to be encapsulated in square brackets).
 
 B<identity_file> - Specify the identify file to use.
 

@@ -15,7 +15,7 @@ use Net::IPv6Addr;
 
 BEGIN{
    use vars qw/$VERSION/;
-   $VERSION = '0.15';
+   $VERSION = '0.16';
 }
 
 # Options added as needed

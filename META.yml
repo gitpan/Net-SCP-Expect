@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Net-SCP-Expect
-version:             0.15
+version:             0.16
 abstract:            Wrapper for scp that allows passwords via Expect.
 license:             ~
 author:              

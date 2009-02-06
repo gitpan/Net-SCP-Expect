@@ -1,5 +1,8 @@
 Revision history for Perl extension Net-SCP-Expect
 
+0.16  Friday February 6 06:23:51 2009
+- Clean distribution of ._* OS X resource forks (i.e. file/..namedfork/rsrc -> ._file)
+
 0.15  Monday February 2 23:01:03 2009
 - Support IPv6 host addresses in long and short scp forms.
 - Add support for -C, -4 and -6 options (compress, force IPv4 and force
